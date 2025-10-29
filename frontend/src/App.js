@@ -204,7 +204,7 @@ export default function QuizApplication() {
 
         const questionsData = await questionsResponse.json();
         setQuestions(questionsData.questions);
-        setTimeRemaining(questionsData.duration || 3600);
+        setTimeRemaining(questionsData.duration || 600);
         setCurrentView('instructions');
       }
     } catch (err) {
@@ -297,6 +297,22 @@ export default function QuizApplication() {
     }
   };
 
+  const handleLogout = () => {
+    // clear saved state/localStorage and return to login
+    localStorage.removeItem('quizAnswers');
+    localStorage.removeItem('quizTimeRemaining');
+    setPassword('');
+    setUser(null);
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+    setAnswers({});
+    setTimeRemaining(null);
+    setLoading(false);
+    setError('');
+    setSubmitted(false);
+    setCurrentView('login');
+  };
+  
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -388,6 +404,12 @@ export default function QuizApplication() {
               >
                 Start Quiz
               </button>
+              <button
+                onClick={handleLogout}
+                className="btn btn-outline-secondary btn-lg"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -411,6 +433,12 @@ export default function QuizApplication() {
                 <small className="text-muted">Question {currentQuestionIndex + 1} of {questions.length}</small>
               </div>
               <div className="d-flex align-items-center gap-4">
+                <button
+                  onClick={handleLogout}
+                  className="btn btn-outline-secondary btn-sm"
+                >
+                  Logout
+                </button>
                 <div className="d-flex align-items-center gap-2">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10"></circle>
@@ -599,6 +627,12 @@ export default function QuizApplication() {
               </div>
             )}
 
+            <div className="d-flex gap-3 justify-content-center">
+              <button onClick={handleLogout} className="btn btn-outline-secondary">
+                Logout
+              </button>
+            </div>
+  
           </div>
         </div>
       </div>
