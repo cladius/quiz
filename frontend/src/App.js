@@ -59,8 +59,16 @@ export default function QuizApplication() {
   const [user, setUser] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [answers, setAnswers] = useState(() => {
+    // Load saved answers from localStorage on initial mount
+    const savedAnswers = localStorage.getItem('quizAnswers');
+    return savedAnswers ? JSON.parse(savedAnswers) : {};
+  });
+  const [timeRemaining, setTimeRemaining] = useState(() => {
+    // Load saved time from localStorage on initial mount
+    const savedTime = localStorage.getItem('quizTimeRemaining');
+    return savedTime ? parseInt(savedTime) : null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -119,7 +127,10 @@ export default function QuizApplication() {
             handleSubmit();
             return 0;
           }
-          return prev - 1;
+          const newTime = prev - 1;
+          // Save time to localStorage
+          localStorage.setItem('quizTimeRemaining', newTime.toString());
+          return newTime;
         });
       }, 1000);
 
@@ -208,10 +219,15 @@ export default function QuizApplication() {
   };
 
   const handleAnswerSelect = (questionId, optionIndex) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: optionIndex
-    }));
+    setAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: optionIndex
+      };
+      // Save to localStorage
+      localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
+      return newAnswers;
+    });
   };
 
   const calculateScore = () => {
@@ -229,6 +245,9 @@ export default function QuizApplication() {
     
     setLoading(true);
     setSubmitted(true);
+    // Clear stored answers and time from localStorage
+    localStorage.removeItem('quizAnswers');
+    localStorage.removeItem('quizTimeRemaining');
 
     try {
       if (USE_MOCK_DATA) {
