@@ -323,11 +323,15 @@ export default function QuizApplication() {
                 <li>Time Limit: {formatTime(timeRemaining)}</li>
                 <li>There is NO negative marking</li>
                 <li>DO NOT switch tabs or minimize the window</li>
+                <li>Page refreshes will lead to questions getting shuffled BUT your answer choices will be retained</li>
                 <li>ALL such attempts will be logged silently AFTER you Start Quiz</li>
                 <li>Any such attempt will result in disqualification and lead to ZERO marks</li>
                 <li>You can review and change answers before submitting</li>
                 <li>Once the timer runs out, it will automatically submit your answers</li>
                 <li>Click "Submit Test" when you're done</li>
+                <li>Single choice questions have radio button options</li>
+                <li>Multiple choice questions have checkbox options</li>
+                <li>All the best!</li>
               </ul>
             </div>
 
