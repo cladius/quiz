@@ -203,7 +203,8 @@ export default function QuizApplication() {
         }
 
         const questionsData = await questionsResponse.json();
-        setQuestions(questionsData.questions);
+        const shuffledQuestions = shuffleQuestions(questionsData.questions);
+        setQuestions(shuffledQuestions);
         setTimeRemaining(questionsData.duration || 600);
         setCurrentView('instructions');
       }

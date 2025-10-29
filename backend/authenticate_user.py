@@ -18,14 +18,23 @@ table = dynamodb.Table('users')
 def lambda_handler(event, context):
     """
     Lambda function to retrieve username and quiz_id based on password.
-    
-    Args:
-        event: API Gateway event containing the request
-        context: Lambda context object
-        
-    Returns:
-        API Gateway formatted response with username and quiz_id
     """
+    
+    # CORS headers
+    cors_headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'POST,OPTIONS'
+    }
+    
+    # Handle OPTIONS preflight request
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': cors_headers,
+            'body': json.dumps({'message': 'CORS preflight successful'})
+        }
     
     try:
         # Parse the request body from API Gateway
@@ -40,10 +49,7 @@ def lambda_handler(event, context):
         if not password:
             return {
                 'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
+                'headers': cors_headers,
                 'body': json.dumps({
                     'error': 'Password is required'
                 })
@@ -60,10 +66,7 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 404,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
+                'headers': cors_headers,
                 'body': json.dumps({
                     'error': 'Invalid password'
                 })
@@ -77,10 +80,7 @@ def lambda_handler(event, context):
         # Return successful response
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'username': username,
                 'quiz_id': quiz_id
@@ -88,39 +88,27 @@ def lambda_handler(event, context):
         }
         
     except ClientError as e:
-        # Handle DynamoDB errors
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'error': f'Database error: {str(e)}'
             })
         }
         
     except json.JSONDecodeError:
-        # Handle JSON parsing errors
         return {
             'statusCode': 400,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'error': 'Invalid JSON in request body'
             })
         }
         
     except Exception as e:
-        # Handle unexpected errors
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'error': f'Internal server error: {str(e)}'
             })
