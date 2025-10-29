@@ -220,11 +220,27 @@ export default function QuizApplication() {
 
   const handleAnswerSelect = (questionId, optionIndex) => {
     setAnswers(prev => {
+      const question = questions.find(q => q.id === questionId);
+      let newAnswer;
+
+      if (question.multiple_choice) {
+        // Ensure we have an array for multiple choice questions
+        const currentAnswers = Array.isArray(prev[questionId]) ? prev[questionId] : [];
+        
+        if (currentAnswers.includes(optionIndex)) {
+          newAnswer = currentAnswers.filter(i => i !== optionIndex);
+        } else {
+          newAnswer = [...currentAnswers, optionIndex];
+        }
+      } else {
+        // For single choice, just set the option
+        newAnswer = optionIndex;
+      }
+
       const newAnswers = {
         ...prev,
-        [questionId]: optionIndex
+        [questionId]: newAnswer
       };
-      // Save to localStorage
       localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
       return newAnswers;
     });
@@ -428,29 +444,54 @@ export default function QuizApplication() {
               </h4>
 
               <div className="d-grid gap-3">
-                {currentQuestion.options.map((option, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleAnswerSelect(currentQuestion.id, index)}
-                    className={`btn btn-lg text-start p-3 ${
-                      answers[currentQuestion.id] === index
-                        ? 'btn-primary'
-                        : 'btn-outline-secondary'
-                    }`}
-                  >
-                    <div className="d-flex align-items-center gap-3">
-                      <div 
-                        className="border border-2 rounded-circle d-flex align-items-center justify-content-center"
-                        style={{ width: '24px', height: '24px', minWidth: '24px' }}
+                {currentQuestion.options.map((option, index) => {
+                  const currentAnswer = answers[currentQuestion.id];
+                  const isSelected = currentQuestion.multiple_choice 
+                    ? (Array.isArray(currentAnswer) && currentAnswer.includes(index))
+                    : (currentAnswer === index);
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleAnswerSelect(currentQuestion.id, index)}
+                      className={`btn btn-lg text-start p-3 ${
+                        isSelected ? 'btn-primary' : 'btn-outline-secondary'
+                      }`}
+                    >
+                      <div className="d-flex align-items-center gap-3">
+                                              {/* Radio button or checkbox container */}
+                                              <div 
+                        className={`border border-2 d-flex align-items-center justify-content-center ${currentQuestion.multiple_choice ? 'rounded' : 'rounded-circle'}`}
+                        style={{ 
+                          width: '24px', 
+                          height: '24px', 
+                          minWidth: '24px'
+                        }}
                       >
-                        {answers[currentQuestion.id] === index && (
-                          <div className="bg-white rounded-circle" style={{ width: '12px', height: '12px' }}></div>
-                        )}
+                          {isSelected && (
+                            currentQuestion.multiple_choice ? (
+                              // Checkmark for multiple choice
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            ) : (
+                              // Filled circle for radio button
+                              <div 
+                                className="bg-white" 
+                                style={{ 
+                                  width: '12px', 
+                                  height: '12px',
+                                  borderRadius: '50%'  // Always circular for radio button dot
+                                }}
+                              ></div>
+                            )
+                          )}
+                        </div>
+                        <span>{option}</span>
                       </div>
-                      <span>{option}</span>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
