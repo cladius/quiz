@@ -1,57 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// Toggle this to switch between mock data and real API
-const USE_MOCK_DATA = false;
 const API_BASE_URL = 'https://dz8xd5aucf.execute-api.ap-south-1.amazonaws.com/prod';
-
-// Mock data for testing
-const MOCK_USER = {
-  username: 'John Doe',
-  quiz_id: 'quiz_123'
-};
-
-const MOCK_QUESTIONS = [
-  {
-    id: 'q1',
-    order: 1,
-    question: 'What is the capital of France?',
-    options: ['London', 'Berlin', 'Paris', 'Madrid'],
-    marks: 2,
-    correct_option: 2
-  },
-  {
-    id: 'q2',
-    order: 2,
-    question: 'Which planet is known as the Red Planet?',
-    options: ['Venus', 'Mars', 'Jupiter', 'Saturn'],
-    marks: 2,
-    correct_option: 1
-  },
-  {
-    id: 'q3',
-    order: 3,
-    question: 'What is 2 + 2?',
-    options: ['3', '4', '5', '6'],
-    marks: 1,
-    correct_option: 1
-  },
-  {
-    id: 'q4',
-    order: 4,
-    question: 'Who wrote "Romeo and Juliet"?',
-    options: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'],
-    marks: 2,
-    correct_option: 1
-  },
-  {
-    id: 'q5',
-    order: 5,
-    question: 'What is the largest ocean on Earth?',
-    options: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Pacific Ocean'],
-    marks: 2,
-    correct_option: 3
-  }
-];
 
 export default function QuizApplication() {
   const [currentView, setCurrentView] = useState('login');
@@ -139,11 +88,6 @@ export default function QuizApplication() {
   }, [currentView, timeRemaining]);
 
   const logAlert = async (reason) => {
-    if (USE_MOCK_DATA) {
-      console.log('🚨 Alert logged:', reason, new Date().toISOString());
-      return;
-    }
-
     try {
       await fetch(`${API_BASE_URL}/alert`, {
         method: 'POST',
@@ -167,47 +111,37 @@ export default function QuizApplication() {
     setError('');
 
     try {
-      if (USE_MOCK_DATA) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        setUser({ ...MOCK_USER, password });
-        const shuffledQuestions = shuffleQuestions(MOCK_QUESTIONS);
-        setQuestions(shuffledQuestions);
-        setTimeRemaining(1800);
-        setCurrentView('instructions');
-      } else {
-        const response = await fetch(`${API_BASE_URL}/authenticate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
-        });
+      const response = await fetch(`${API_BASE_URL}/authenticate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
 
-        if (!response.ok) {
-          throw new Error('Invalid password');
-        }
-
-        const data = await response.json();
-        setUser({ ...data, password });
-        
-        const questionsResponse = await fetch(`${API_BASE_URL}/questions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            quiz_id: data.quiz_id,
-            password: password
-          })
-        });
-
-        if (!questionsResponse.ok) {
-          throw new Error('Failed to fetch questions');
-        }
-
-        const questionsData = await questionsResponse.json();
-        const shuffledQuestions = shuffleQuestions(questionsData.questions);
-        setQuestions(shuffledQuestions);
-        setTimeRemaining(questionsData.duration || 600);
-        setCurrentView('instructions');
+      if (!response.ok) {
+        throw new Error('Invalid password');
       }
+
+      const data = await response.json();
+      setUser({ ...data, password });
+      
+      const questionsResponse = await fetch(`${API_BASE_URL}/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          quiz_id: data.quiz_id,
+          password: password
+        })
+      });
+
+      if (!questionsResponse.ok) {
+        throw new Error('Failed to fetch questions');
+      }
+
+      const questionsData = await questionsResponse.json();
+      const shuffledQuestions = shuffleQuestions(questionsData.questions);
+      setQuestions(shuffledQuestions);
+      setTimeRemaining(questionsData.duration || 600);
+      setCurrentView('instructions');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -267,29 +201,30 @@ export default function QuizApplication() {
     localStorage.removeItem('quizTimeRemaining');
 
     try {
-      if (USE_MOCK_DATA) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const score = calculateScore();
-        setUser(prev => ({ ...prev, score }));
-        setCurrentView('completed');
-      } else {
-        const response = await fetch(`${API_BASE_URL}/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            password: user.password,
-            answers: answers
-          })
-        });
+      const response = await fetch(`${API_BASE_URL}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: user.password,
+          answers: answers
+        })
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to submit answers');
+      if (!response.ok) {
+        let errBody = null;
+        try {
+          errBody = await response.json();
+        } catch (e) {
+          // ignore parse errors
         }
-
-        const result = await response.json();
-        setUser(prev => ({ ...prev, score: result.score }));
-        setCurrentView('completed');
+        const msg = errBody?.error || errBody?.message || `Failed to submit answers (${response.status})`;
+        throw new Error(msg);
       }
+
+      const result = await response.json();
+      setUser(prev => ({ ...prev, score: result.score }));
+      setError(''); 
+      setCurrentView('completed');
     } catch (err) {
       setError(err.message);
       setSubmitted(false);
@@ -335,11 +270,6 @@ export default function QuizApplication() {
               </div>
               <h1 className="display-5 fw-bold mb-2">Student Quiz</h1>
               <p className="text-muted">Enter your password to begin</p>
-              {USE_MOCK_DATA && (
-                <p className="text-success fw-semibold small">
-                  🧪 Demo Mode: Enter any password
-                </p>
-              )}
             </div>
 
             <div className="mb-4">
@@ -524,6 +454,18 @@ export default function QuizApplication() {
               </div>
             </div>
           </div>
+
+          {/* Show submission/API error (e.g. "Quiz already submitted") */}
+          {error && (
+            <div className="alert alert-danger d-flex align-items-center mb-4" role="alert">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="me-2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
 
           {/* Navigation */}
           <div className="d-flex gap-3 mb-4">
