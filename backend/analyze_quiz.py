@@ -2,48 +2,33 @@ import json
 import boto3
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
+import smtplib
+import os
+from email.mime.text import MIMEText
 
-'''
-Python AWS Lambda function that takes in input as password and generates a detailed quiz report for that person
+def send_email(to_address, subject, body):
+    # Read credentials from Lambda environment variables
+    zoho_email = os.environ.get('ZOHO_EMAIL')
+    zoho_password = os.environ.get('ZOHO_PASSWORD')
+    zoho_smtp_host = os.environ.get('ZOHO_SMTP_HOST', 'smtp.zoho.com')
+    zoho_smtp_port = int(os.environ.get('ZOHO_SMTP_PORT', '465'))
+    
+    # Validate required credentials are present
+    if not zoho_email or not zoho_password:
+        raise ValueError("ZOHO_EMAIL and ZOHO_PASSWORD environment variables must be set")
+    
+    print(f"Sending email to: {to_address}\nSubject: {subject}\nBody:\n{body}\n")
+    
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = zoho_email
+    msg['To'] = to_address
 
-# Pseudocode
-- First do a look up on users table to check if the record exists. If not throw error and exit.
-- Then get the answers attribute
-- Then get the quiz_id and lookup the questions from questions table
-- Then prepare a detailed report like this
-
-Q1: ....
-Options: 1, 2, 3, 4 (Note:in code it starts from 0, but on UI start with 1)
-Your selection: 1
-Actual correct answer(s): 2
-
-# DB details
-
-DynamoDB table 'users' sample record
-{
- "password": "123",
- "answers": {
-  "q2": [
-   2,
-   1
-  ],
-  "q5": 1
- },
- "is_submitted": true,
- "marks": 2,
- "quiz_id": "final",
-"username": "Sameer"}
-
-DynamoDB table 'questions' contains user information like this
-The quiz_id is the partition key for the DynamoDB table. and order is the sort key
-{ "quiz_id": "final", "order": 2, "correct_options": "1,2", "marks": 2, "multiple_choice": true, "options": [  "Fad",  "LLM + Tools",  "Fundamental aspect of Agentic AI",  "FOMO" ], "question": "What is an Agent?"}
-{ "quiz_id": "final", "order": 5, "correct_options": "2", "marks": 1, "multiple_choice": false, "options": [  "Fad",  "A question",  "Application of GenAI",  "FOMO Course" ], "question": "What is Agentic AI?"}
-
-Expected input:
-{
-  "password": "367"
-}
-'''
+    with smtplib.SMTP_SSL(zoho_smtp_host, zoho_smtp_port) as server:
+        server.login(zoho_email, zoho_password)
+        server.send_message(msg)
+    
+    print(f"Email sent successfully to {to_address}")
 
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb')
@@ -103,6 +88,7 @@ def lambda_handler(event, context):
         username = user.get('username', 'Unknown')
         marks = user.get('marks', 0)
         is_submitted = user.get('is_submitted', False)
+        email = user.get('email', None)
         
         if not quiz_id:
             return {
@@ -175,6 +161,24 @@ def lambda_handler(event, context):
             else:
                 report_lines.append(f"Actual correct answer(s): {correct_displayed[0]}")
             
+            # Check if answered correctly
+            is_correct = False
+            if user_answer is not None:
+                if isinstance(user_answer, list):
+                    # For multiple choice, check if sets match
+                    user_answer_set = set(user_answer)
+                    correct_options_set = set(correct_options)
+                    is_correct = user_answer_set == correct_options_set
+                else:
+                    # For single choice, check if answer matches
+                    is_correct = user_answer in correct_options
+            
+            # Display result
+            if is_correct:
+                report_lines.append("Result: ✓ Answered Correctly")
+            else:
+                report_lines.append("Result: ✗ Answered Incorrectly")
+            
             # Show marks for this question
             report_lines.append(f"Marks: {question_marks}")
             report_lines.append("")
@@ -183,6 +187,11 @@ def lambda_handler(event, context):
         report_lines.append(f"Your Score: {marks}/{total_possible_marks}")
         
         report_text = "\n".join(report_lines)
+
+        # Step 5: Send report via email if email is available
+        if email:
+            email_subject = f"Quiz Report for {username} (Quiz ID: {quiz_id})"
+            send_email(email, email_subject, report_text)
         
         return {
             'statusCode': 200,
