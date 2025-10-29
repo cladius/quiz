@@ -321,9 +321,12 @@ export default function QuizApplication() {
               <ul className="mb-0">
                 <li>Total Questions: {questions.length}</li>
                 <li>Time Limit: {formatTime(timeRemaining)}</li>
-                <li>Do not switch tabs or minimize the window</li>
-                <li>Any attempt to leave the test will be logged</li>
+                <li>There is NO negative marking</li>
+                <li>DO NOT switch tabs or minimize the window</li>
+                <li>ALL such attempts will be logged silently AFTER you Start Quiz</li>
+                <li>Any such attempt will result in disqualification and lead to ZERO marks</li>
                 <li>You can review and change answers before submitting</li>
+                <li>Once the timer runs out, it will automatically submit your answers</li>
                 <li>Click "Submit Test" when you're done</li>
               </ul>
             </div>
