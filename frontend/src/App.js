@@ -5,22 +5,83 @@ const API_BASE_URL = 'https://dz8xd5aucf.execute-api.ap-south-1.amazonaws.com/pr
 export default function QuizApplication() {
   const [currentView, setCurrentView] = useState('login');
   const [password, setPassword] = useState('');
-  const [user, setUser] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [user, setUser] = useState(() => {
+    // Load saved user from storage on initial mount
+    const savedUser = window.sessionStorage.getItem('quizUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [questions, setQuestions] = useState(() => {
+    // Load saved questions from storage on initial mount
+    const savedQuestions = window.sessionStorage.getItem('quizQuestions');
+    return savedQuestions ? JSON.parse(savedQuestions) : [];
+  });
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() => {
+    // Load saved question index from storage
+    const savedIndex = window.sessionStorage.getItem('quizCurrentIndex');
+    return savedIndex ? parseInt(savedIndex) : 0;
+  });
   const [answers, setAnswers] = useState(() => {
-    // Load saved answers from localStorage on initial mount
-    const savedAnswers = localStorage.getItem('quizAnswers');
+    // Load saved answers from storage on initial mount
+    const savedAnswers = window.sessionStorage.getItem('quizAnswers');
     return savedAnswers ? JSON.parse(savedAnswers) : {};
   });
   const [timeRemaining, setTimeRemaining] = useState(() => {
-    // Load saved time from localStorage on initial mount
-    const savedTime = localStorage.getItem('quizTimeRemaining');
+    // Load saved time from storage on initial mount
+    const savedTime = window.sessionStorage.getItem('quizTimeRemaining');
     return savedTime ? parseInt(savedTime) : null;
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(() => {
+    // Load submitted state from storage
+    const savedSubmitted = window.sessionStorage.getItem('quizSubmitted');
+    return savedSubmitted === 'true';
+  });
+
+  // Initialize view based on saved state
+  useEffect(() => {
+    if (user && questions.length > 0) {
+      const savedView = window.sessionStorage.getItem('quizCurrentView');
+      if (savedView && savedView !== 'login') {
+        setCurrentView(savedView);
+      } else {
+        setCurrentView('instructions');
+      }
+    }
+  }, []);
+
+  // Save user to storage whenever it changes
+  useEffect(() => {
+    if (user) {
+      window.sessionStorage.setItem('quizUser', JSON.stringify(user));
+    } else {
+      window.sessionStorage.removeItem('quizUser');
+    }
+  }, [user]);
+
+  // Save questions to storage whenever they change
+  useEffect(() => {
+    if (questions.length > 0) {
+      window.sessionStorage.setItem('quizQuestions', JSON.stringify(questions));
+    } else {
+      window.sessionStorage.removeItem('quizQuestions');
+    }
+  }, [questions]);
+
+  // Save current view to storage
+  useEffect(() => {
+    window.sessionStorage.setItem('quizCurrentView', currentView);
+  }, [currentView]);
+
+  // Save current question index to storage
+  useEffect(() => {
+    window.sessionStorage.setItem('quizCurrentIndex', currentQuestionIndex.toString());
+  }, [currentQuestionIndex]);
+
+  // Save submitted state to storage
+  useEffect(() => {
+    window.sessionStorage.setItem('quizSubmitted', submitted.toString());
+  }, [submitted]);
 
   // Load Bootstrap CSS
   useEffect(() => {
@@ -77,8 +138,8 @@ export default function QuizApplication() {
             return 0;
           }
           const newTime = prev - 1;
-          // Save time to localStorage
-          localStorage.setItem('quizTimeRemaining', newTime.toString());
+          // Save time to storage
+          window.sessionStorage.setItem('quizTimeRemaining', newTime.toString());
           return newTime;
         });
       }, 1000);
@@ -176,7 +237,7 @@ export default function QuizApplication() {
         ...prev,
         [questionId]: newAnswer
       };
-      localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
+      window.sessionStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
       return newAnswers;
     });
   };
@@ -196,9 +257,6 @@ export default function QuizApplication() {
     
     setLoading(true);
     setSubmitted(true);
-    // Clear stored answers and time from localStorage
-    localStorage.removeItem('quizAnswers');
-    localStorage.removeItem('quizTimeRemaining');
 
     try {
       const response = await fetch(`${API_BASE_URL}/submit`, {
@@ -234,9 +292,15 @@ export default function QuizApplication() {
   };
 
   const handleLogout = () => {
-    // clear saved state/localStorage and return to login
-    localStorage.removeItem('quizAnswers');
-    localStorage.removeItem('quizTimeRemaining');
+    // clear saved state/storage and return to login
+    window.sessionStorage.removeItem('quizAnswers');
+    window.sessionStorage.removeItem('quizTimeRemaining');
+    window.sessionStorage.removeItem('quizUser');
+    window.sessionStorage.removeItem('quizQuestions');
+    window.sessionStorage.removeItem('quizCurrentView');
+    window.sessionStorage.removeItem('quizCurrentIndex');
+    window.sessionStorage.removeItem('quizSubmitted');
+    
     setPassword('');
     setUser(null);
     setQuestions([]);
@@ -324,7 +388,7 @@ export default function QuizApplication() {
                 <li>There is NO negative marking</li>
                 <li>DO NOT switch tabs or minimize the window</li>
                 <li>Page refreshes will lead to questions getting shuffled BUT your answer choices will be retained</li>
-                <li>ALL such attempts will be logged silently AFTER you Start Quiz</li>
+                <li>ALL such attempts will be logged silently</li>
                 <li>Any such attempt will result in disqualification and lead to ZERO marks</li>
                 <li>You can review and change answers before submitting</li>
                 <li>Once the timer runs out, it will automatically submit your answers</li>
@@ -425,15 +489,15 @@ export default function QuizApplication() {
                       }`}
                     >
                       <div className="d-flex align-items-center gap-3">
-                                              {/* Radio button or checkbox container */}
-                                              <div 
-                        className={`border border-2 d-flex align-items-center justify-content-center ${currentQuestion.multiple_choice ? 'rounded' : 'rounded-circle'}`}
-                        style={{ 
-                          width: '24px', 
-                          height: '24px', 
-                          minWidth: '24px'
-                        }}
-                      >
+                        {/* Radio button or checkbox container */}
+                        <div 
+                          className={`border border-2 d-flex align-items-center justify-content-center ${currentQuestion.multiple_choice ? 'rounded' : 'rounded-circle'}`}
+                          style={{ 
+                            width: '24px', 
+                            height: '24px', 
+                            minWidth: '24px'
+                          }}
+                        >
                           {isSelected && (
                             currentQuestion.multiple_choice ? (
                               // Checkmark for multiple choice
@@ -447,7 +511,7 @@ export default function QuizApplication() {
                                 style={{ 
                                   width: '12px', 
                                   height: '12px',
-                                  borderRadius: '50%'  // Always circular for radio button dot
+                                  borderRadius: '50%'
                                 }}
                               ></div>
                             )
