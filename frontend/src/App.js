@@ -332,7 +332,7 @@ export default function QuizApplication() {
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </div>
-              <h1 className="display-5 fw-bold mb-2">Student Quiz</h1>
+              <h1 className="display-5 fw-bold mb-2">Quiz</h1>
               <p className="text-muted">Enter your password to begin</p>
             </div>
 
