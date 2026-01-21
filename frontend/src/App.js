@@ -468,9 +468,7 @@ export default function QuizApplication() {
                 </span>
               </div>
               
-              <h4 className="mb-4 fw-semibold">
-                {currentQuestion.question}
-              </h4>
+              <h4 className="mb-4 fw-semibold" dangerouslySetInnerHTML={{ __html: currentQuestion.question.replace(/\n/g, '<br>') }} />
 
               <div className="d-grid gap-3">
                 {currentQuestion.options.map((option, index) => {
