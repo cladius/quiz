@@ -201,7 +201,7 @@ export default function QuizApplication() {
       const questionsData = await questionsResponse.json();
       const shuffledQuestions = shuffleQuestions(questionsData.questions);
       setQuestions(shuffledQuestions);
-      setTimeRemaining(questionsData.duration || 7200);
+      setTimeRemaining(questionsData.duration || 900);
       setCurrentView('instructions');
     } catch (err) {
       setError(err.message);
